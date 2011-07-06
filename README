@@ -1,0 +1,17 @@
+This is a botliga client which will estimate the Result of a soccer game based on team performance indicators.
+
+The algorithm ist based on following thoughts.
+
+- The total number of goals shot in a soccer match is distributed according to a poission distribution.
+
+- There is a home field advantage which might have a season based and a team based component
+
+- The generell fitness of a team can be estimated by the average goal difference per match.
+  (Taking into account that some teams played a different league the season before)
+
+- Beyond fitness ther are factors like weather conditions, injuries, red/yellow cards which have an
+  influence on the result.
+
+- The are some motivation based factors like "a series of matches won/lost", or intra match factors leading to
+  a risen probability of 1:1 results.
+
