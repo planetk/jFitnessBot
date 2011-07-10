@@ -113,10 +113,7 @@ public class DataService {
 			// ----------------
 			
 			Team heimTeam = teams.get(match.getHeimTeam());
-			
-			TeamStatus bufferStatus;
 			TeamStatus status = calculateTeamStatus(statusBuffer, match, heimTeam, true);
-			
 			heimTeam.getStatus().put(getSpieltagId(match.getSaison(), match.getSpieltag()), status);
 			
 			result.put(getTeamStatusId(match.getSaison(), match.getSpieltag(), match.getHeimTeam()), status);
@@ -124,9 +121,7 @@ public class DataService {
 			//-----------
 			
 			Team gastTeam = teams.get(match.getGastTeam());
-
 			status = calculateTeamStatus(statusBuffer, match, gastTeam, false);
-			
 			gastTeam.getStatus().put(getSpieltagId(match.getSaison(), match.getSpieltag()), status);
 
 			result.put(getTeamStatusId(match.getSaison(), match.getSpieltag(), match.getGastTeam()), status);

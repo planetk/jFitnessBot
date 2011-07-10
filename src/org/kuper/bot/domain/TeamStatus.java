@@ -119,7 +119,8 @@ public class TeamStatus {
 	}
 	
 	public float getFitness() {
-		return ((float)tordifferenz) / spieltag;
+		return (new Float(tordifferenz)) / spieltag;
+//		return ((float)tordifferenz) / spieltag;
 	}
 
 	

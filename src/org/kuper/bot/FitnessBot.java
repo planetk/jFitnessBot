@@ -11,10 +11,12 @@ import org.kuper.bot.domain.Match;
 import org.kuper.bot.domain.Team;
 import org.kuper.bot.domain.TeamStatus;
 import org.kuper.bot.service.DataService;
+import org.kuper.bot.service.EstimationService;
 
 public class FitnessBot {
 	
 	private DataService dataService = new DataService();
+	private EstimationService estimationService = new EstimationService();  
 
 	public void readHistoricalMatchData() {
 		dataService.init();
@@ -46,103 +48,13 @@ public class FitnessBot {
 
 	private int tippeSaison(int saison, boolean sendTipp) {
 		
-		Map<String, Match> matches = dataService.getMatches();
-		Map<Integer, Team> teams = dataService.getTeams();
-	
-		float heimVorteil = 0.8f;
-		
 		int gesamtPunkte = 0;
 		
 		for (int spieltag = 1; spieltag <= 34; spieltag++) {
-			
-			int spieltagsPunkte = 0;
-			
-			for (int spiel = 1; spiel <= 9; spiel++) {
-				
-				String matchId = getMatchId(saison, spieltag, spiel);
-				
-				Match match = matches.get(matchId);
-				
-				Team heimTeam = teams.get(match.getHeimTeam());
-				TeamStatus heimStatus = heimTeam.getStatus().get(getSpieltagId(saison, spieltag, -1));
-				// TODO: proper handling for 2 Liga Mannschaften
-				if (heimStatus==null) {
-					heimStatus = TeamStatus.getLiga2Status(heimTeam, saison - 1, 34);
-				}
-				float fitnessSaisonHeim = heimStatus.getFitness();
-				
-				Team gastTeam = teams.get(match.getGastTeam());
-				TeamStatus gastStatus = gastTeam.getStatus().get(getSpieltagId(saison, spieltag, -1));
-				if (gastStatus == null) {
-					gastStatus = TeamStatus.getLiga2Status(gastTeam, saison - 1, 34);
-				}
-				float fitnessSaisonGast = gastStatus.getFitness();
-
-				float heimPerformance = heimVorteil + fitnessSaisonHeim;
-				float gastPerformance = fitnessSaisonGast;
-				
-				float deltaFitness = heimPerformance - gastPerformance;
-
-
-// 4837		
-//				float summeTore = 2.78f; // => 385
-
-// 4356
-//				float summeTore = 3.5f; // => 344
-
-// 4989				
-//				float summeTore = 2.9f; // => 375
-
-// 4996				
-				float summeTore = 3.01f; // => 371
-
-// 4937				
-//				float summeTore = getEstimatedGoals( heimTore, heimGegentore, gastTore, gastGegentore); // => 391
-
-//				float summeTore = getEstimatedGoals2(heimStatus.getTorschnitt(), gastStatus.getTorschnitt()); // => 391
-//				float summeTore = getEstimatedGoals( heimStatus.getTorschnitt(), heimStatus.getGegentorschnitt(), gastStatus.getTorschnitt(), gastStatus.getGegentorschnitt()); // => 391
-				
-// 4703				
-//				float summeTore = (new Float( heimTore + heimGegentore + gastTore + gastGegentore) / (2 * getSpielCount(spieltag,-1)));
-				
-//				float summeTore = (new Float( heimTore + heimGegentore + gastTore + gastGegentore) / (2 * getSpielCount(spieltag,-1)));
-//				float summeTore = 1.5f + (new Float( heimTore + heimGegentore + gastTore + gastGegentore) / (8 * getSpielCount(spieltag,-1)));
-
-//				System.err.println("SUMME: " + summeTore);
-				
-				
-				float toreHeim = (summeTore + deltaFitness) / 2;
-				float toreGast = (summeTore - deltaFitness) / 2;
-				
-				int th = Math.round(toreHeim);
-				int tg = Math.round(toreGast);
-
-				int spielPunkte = getTippPunkte(th, tg, match.getHeimTore(), match.getGastTore());
-				
-				if (sendTipp) {
-					sendTipp(match, th, tg);
-				}
-				
-	/*
-				System.out.println("" + heimTeam.getName() + "-"
-						+ gastTeam.getName() + " "
-						+ th + ":" 
-						+ tg + " ("
-						+ match.getHeimTore() + ":"
-						+ match.getGastTore() + ") "
-						+ spielPunkte
-				);
-	*/
-				spieltagsPunkte = spieltagsPunkte + spielPunkte;
-				gesamtPunkte = gesamtPunkte + spielPunkte;
-			}
-			
-	//		System.out.println("---------------------------------------");
-	//		System.out.println("Spieltag: " + spieltagsPunkte);
-	//		System.out.println("---------------------------------------");
-			
-		}
 		
+			gesamtPunkte = gesamtPunkte + tippeSpieltag(saison, spieltag, sendTipp);
+		}
+			
 		System.out.println("=======================================");
 		System.out.println("Saison: " + gesamtPunkte);
 		System.out.println("=======================================");
@@ -150,6 +62,128 @@ public class FitnessBot {
 		return gesamtPunkte;
 	}
 
+	private int tippeSpieltag(int saison, int spieltag, boolean sendTipp) {
+		
+		Map<String, Match> matches = dataService.getMatches();
+		Map<Integer, Team> teams = dataService.getTeams();
+	
+		float heimVorteil = estimationService.estimateHomeAdavantage();
+		
+		int spieltagsPunkte = 0;
+			
+		for (int spiel = 1; spiel <= 9; spiel++) {
+				
+			String matchId = getMatchId(saison, spieltag, spiel);
+				
+			Match match = matches.get(matchId);
+				
+			Team heimTeam = teams.get(match.getHeimTeam());
+			TeamStatus heimStatus = heimTeam.getStatus().get(getSpieltagId(saison, spieltag, -1));
+			// TODO: proper handling for 2 Liga Mannschaften
+			if (heimStatus==null) {
+				heimStatus = TeamStatus.getLiga2Status(heimTeam, saison - 1, 34);
+			}
+			float fitnessSaisonHeim = heimStatus.getFitness();
+
+			TeamStatus heimStatusVorSaison = heimTeam.getStatus().get(getSpieltagId(saison-1, 34));
+			// TODO: proper handling for 2 Liga Mannschaften
+			if (heimStatusVorSaison==null) {
+				heimStatusVorSaison = TeamStatus.getLiga2Status(heimTeam, saison - 1, 34);
+			}
+			float fitnessVorSaisonHeim = heimStatusVorSaison.getFitness();
+
+			TeamStatus heimStatusVorVorSaison = heimTeam.getStatus().get(getSpieltagId(saison-2, 34));
+			// TODO: proper handling for 2 Liga Mannschaften
+			if (heimStatusVorVorSaison==null) {
+				heimStatusVorVorSaison = TeamStatus.getLiga2Status(heimTeam, saison - 2, 34);
+			}
+			float fitnessVorVorSaisonHeim = heimStatusVorVorSaison.getFitness();
+			
+			float fitnessVorVorsaisonGewichtetHeim = 0.2f * (17-spieltag/2)*fitnessVorVorSaisonHeim/17;
+			float fitnessVorsaisonGewichtetHeim = 0.8f * (17-spieltag/2)*fitnessVorSaisonHeim/17;
+			float fitnessSaisonGewichtetHeim = ((spieltag/2-1)*fitnessSaisonHeim)/17;
+
+			Team gastTeam = teams.get(match.getGastTeam());
+			TeamStatus gastStatus = gastTeam.getStatus().get(getSpieltagId(saison, spieltag, -1));
+			if (gastStatus == null) {
+				gastStatus = TeamStatus.getLiga2Status(gastTeam, saison - 1, 34);
+			}
+			float fitnessSaisonGast = gastStatus.getFitness();
+
+			TeamStatus gastStatusVorSaison = gastTeam.getStatus().get(getSpieltagId(saison-1, 34));
+			// TODO: proper handling for 2 Liga Mannschaften
+			if (gastStatusVorSaison==null) {
+				gastStatusVorSaison = TeamStatus.getLiga2Status(gastTeam, saison - 1, 34);
+			}
+			float fitnessVorSaisonGast = gastStatusVorSaison.getFitness();
+
+			TeamStatus gastStatusVorVorSaison = gastTeam.getStatus().get(getSpieltagId(saison-2, 34));
+			// TODO: proper handling for 2 Liga Mannschaften
+			if (gastStatusVorVorSaison==null) {
+				gastStatusVorVorSaison = TeamStatus.getLiga2Status(gastTeam, saison - 2, 34);
+			}
+			float fitnessVorVorSaisonGast = gastStatusVorVorSaison.getFitness();
+
+			float fitnessVorVorsaisonGewichtetGast = 0.2f * (17-spieltag/2)*fitnessVorVorSaisonGast/17;
+			float fitnessVorsaisonGewichtetGast = 0.8f * (17-spieltag/2)*fitnessVorSaisonGast/17;
+			float fitnessSaisonGewichtetGast = ((spieltag/2-1)*fitnessSaisonGast)/17;
+			
+			
+			
+			float heimPerformance = heimVorteil + fitnessSaisonGewichtetHeim + fitnessVorsaisonGewichtetHeim + fitnessVorVorsaisonGewichtetHeim;
+			float gastPerformance = fitnessSaisonGewichtetGast + fitnessVorsaisonGewichtetGast + fitnessVorVorsaisonGewichtetGast;
+				
+			float deltaFitness = heimPerformance - gastPerformance;
+
+
+			float estimatedGoals = estimationService.getEstimatedGoals(heimStatus, gastStatus);
+				
+			float toreHeim = (estimatedGoals + deltaFitness) / 2;
+			float toreGast = (estimatedGoals - deltaFitness) / 2;
+				
+			int th = Math.round(toreHeim);
+			int tg = Math.round(toreGast);
+
+			int spielPunkte = getTippPunkte(th, tg, match.getHeimTore(), match.getGastTore());
+				
+			if (sendTipp) {
+				sendTipp(match, th, tg);
+			}
+				
+	
+				System.out.println("" + heimTeam.getName() + "-"
+						+ gastTeam.getName() + " "
+						+ th + ":" 
+						+ tg + " ("
+						+ match.getHeimTore() + ":"
+						+ match.getGastTore() + ") "
+						+ "["
+						+ String.format("%.4f", deltaFitness)
+	/*
+						+ String.format("%.2f", heimPerformance)
+						+ ":"
+		 				+ String.format("%.2f", gastPerformance)
+		*/ 				
+						+ "] "
+						+ spielPunkte
+				);
+	
+			spieltagsPunkte = spieltagsPunkte + spielPunkte;
+		}
+			
+		//	System.out.println("---------------------------------------");
+			System.out.println("Spieltag (" + spieltag + "/" + saison + "): " + spieltagsPunkte);
+			System.out.println("---------------------------------------");
+			
+		
+		return spieltagsPunkte;
+	}
+
+	
+	
+	
+	
+	
 	private void sendTipp(Match match, int th, int tg) {
 		try {
 		    // Construct data
@@ -215,65 +249,5 @@ public class FitnessBot {
 		}
 	}
 
-	private int fac(int n) {
-		return n>1?n*fac(n-1):1; 
-	}
-
-	private float getPoissionProbability(float t, int n) {
-		return new Float((Math.pow(t, n) / fac(n) * Math.pow(Math.exp(1),(-1.0*t))));
-	}
-
-	private float getEstimatedGoals(float team1GoalsShot, float team1GoalsConc, float team2GoalsShot, float team2GoalsConc) {
-		float totalGoals=0.0f;
-		float maxProbability = 0.0f;
-
-		for (int n=0; n <= 6; n++) {
-			for (int m=0; m <= 6; m++) {
-				for (int o=0; o <= 6; o++) {
-					for (int p=0; p <= 6; p++) {
-						float probability = getPoissionProbability(team1GoalsShot, n)
-										  * getPoissionProbability(team1GoalsConc, m)
-										  * getPoissionProbability(team2GoalsShot, o)
-										  * getPoissionProbability(team2GoalsConc, p);
-						if (probability > maxProbability) {
-							maxProbability = probability;
-							totalGoals = new Float(n + m + o + p);
-						}
-					}	
-				}	
-			}			
-		}
-		System.err.println("GOAL: " + totalGoals );
-		return totalGoals;
-	}
-
-	private float getEstimatedGoals2(float team1Goals, float team2Goals) {
-
-		/*
-		float totalGoals=0.0f;
-		float maxProbability = 0.0f;
-
-		for (int n=0; n <= 6; n++) {
-			
-			float p = getPoissionProbability(3, n);
-			System.err.println("PROB: (" + n + "): " + p);
-			
-			for (int m=0; m <= 6; m++) {
-
-				float probability = getPoissionProbability(team1Goals, n)
-								  * getPoissionProbability(team2Goals, m);
-				
-				
-				if (probability >= maxProbability) {
-					//System.err.println("PROB: (" + n + "/" + m + "): " + probability);
-					maxProbability = probability;
-					totalGoals = new Float(n + m);
-				}	
-			}			
-		}
-		return totalGoals;
-		*/
-		return 2.0f + 0.33f * (team1Goals + team2Goals);
-	}
 
 }
