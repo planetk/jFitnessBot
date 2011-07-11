@@ -123,6 +123,14 @@ public class TeamStatus {
 //		return ((float)tordifferenz) / spieltag;
 	}
 
+	public int getTendenz() {
+		if (match.getHeimTeam() == this.team) {
+			return Integer.signum(match.getHeimTore() - match.getGastTore());
+		} else {
+			return Integer.signum(match.getGastTore() - match.getHeimTore());			
+		}
+	}
+
 	
 
 }

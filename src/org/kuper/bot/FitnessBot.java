@@ -12,12 +12,14 @@ import org.kuper.bot.domain.Team;
 import org.kuper.bot.domain.TeamStatus;
 import org.kuper.bot.service.DataService;
 import org.kuper.bot.service.EstimationService;
+import org.kuper.bot.service.FitnessCalculator;
 
 public class FitnessBot {
 	
 	private DataService dataService = new DataService();
 	private EstimationService estimationService = new EstimationService();  
-
+	private FitnessCalculator fitnessCalculator = new FitnessCalculator();
+	
 	public void readHistoricalMatchData() {
 		dataService.init();
 /*
@@ -78,64 +80,39 @@ public class FitnessBot {
 			Match match = matches.get(matchId);
 				
 			Team heimTeam = teams.get(match.getHeimTeam());
-			TeamStatus heimStatus = heimTeam.getStatus().get(getSpieltagId(saison, spieltag, -1));
-			// TODO: proper handling for 2 Liga Mannschaften
-			if (heimStatus==null) {
-				heimStatus = TeamStatus.getLiga2Status(heimTeam, saison - 1, 34);
-			}
-			float fitnessSaisonHeim = heimStatus.getFitness();
+			float fitnessHeim = fitnessCalculator.calculateFitness(saison, spieltag, heimTeam);
 
-			TeamStatus heimStatusVorSaison = heimTeam.getStatus().get(getSpieltagId(saison-1, 34));
-			// TODO: proper handling for 2 Liga Mannschaften
-			if (heimStatusVorSaison==null) {
-				heimStatusVorSaison = TeamStatus.getLiga2Status(heimTeam, saison - 1, 34);
+			float serienFaktorHeim = fitnessCalculator.getSerienFaktor(saison, spieltag, heimTeam);
+			if (serienFaktorHeim < 0) {
+				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + heimTeam.getName()  );
 			}
-			float fitnessVorSaisonHeim = heimStatusVorSaison.getFitness();
-
-			TeamStatus heimStatusVorVorSaison = heimTeam.getStatus().get(getSpieltagId(saison-2, 34));
-			// TODO: proper handling for 2 Liga Mannschaften
-			if (heimStatusVorVorSaison==null) {
-				heimStatusVorVorSaison = TeamStatus.getLiga2Status(heimTeam, saison - 2, 34);
-			}
-			float fitnessVorVorSaisonHeim = heimStatusVorVorSaison.getFitness();
 			
-			float fitnessVorVorsaisonGewichtetHeim = 0.2f * (17-spieltag/2)*fitnessVorVorSaisonHeim/17;
-			float fitnessVorsaisonGewichtetHeim = 0.8f * (17-spieltag/2)*fitnessVorSaisonHeim/17;
-			float fitnessSaisonGewichtetHeim = ((spieltag/2-1)*fitnessSaisonHeim)/17;
-
+			// -------------------------
+			
 			Team gastTeam = teams.get(match.getGastTeam());
-			TeamStatus gastStatus = gastTeam.getStatus().get(getSpieltagId(saison, spieltag, -1));
-			if (gastStatus == null) {
-				gastStatus = TeamStatus.getLiga2Status(gastTeam, saison - 1, 34);
-			}
-			float fitnessSaisonGast = gastStatus.getFitness();
+			float fitnessGast = fitnessCalculator.calculateFitness(saison, spieltag, gastTeam);
 
-			TeamStatus gastStatusVorSaison = gastTeam.getStatus().get(getSpieltagId(saison-1, 34));
-			// TODO: proper handling for 2 Liga Mannschaften
-			if (gastStatusVorSaison==null) {
-				gastStatusVorSaison = TeamStatus.getLiga2Status(gastTeam, saison - 1, 34);
+			float serienFaktorGast = fitnessCalculator.getSerienFaktor(saison, spieltag, gastTeam);
+			if (serienFaktorGast < 0) {
+				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + gastTeam.getName()   );
 			}
-			float fitnessVorSaisonGast = gastStatusVorSaison.getFitness();
 
-			TeamStatus gastStatusVorVorSaison = gastTeam.getStatus().get(getSpieltagId(saison-2, 34));
-			// TODO: proper handling for 2 Liga Mannschaften
-			if (gastStatusVorVorSaison==null) {
-				gastStatusVorVorSaison = TeamStatus.getLiga2Status(gastTeam, saison - 2, 34);
-			}
-			float fitnessVorVorSaisonGast = gastStatusVorVorSaison.getFitness();
-
-			float fitnessVorVorsaisonGewichtetGast = 0.2f * (17-spieltag/2)*fitnessVorVorSaisonGast/17;
-			float fitnessVorsaisonGewichtetGast = 0.8f * (17-spieltag/2)*fitnessVorSaisonGast/17;
-			float fitnessSaisonGewichtetGast = ((spieltag/2-1)*fitnessSaisonGast)/17;
 			
+			float heimPerformance = heimVorteil + fitnessHeim + serienFaktorHeim;
+			float gastPerformance = fitnessGast + serienFaktorGast;
 			
-			
-			float heimPerformance = heimVorteil + fitnessSaisonGewichtetHeim + fitnessVorsaisonGewichtetHeim + fitnessVorVorsaisonGewichtetHeim;
-			float gastPerformance = fitnessSaisonGewichtetGast + fitnessVorsaisonGewichtetGast + fitnessVorVorsaisonGewichtetGast;
-				
 			float deltaFitness = heimPerformance - gastPerformance;
 
-
+//			deltaFitness = new Float(Math.round(deltaFitness * 10)) / 10;
+//			deltaFitness = new Float(Math.round(deltaFitness * 8)) / 8;
+			
+			int norm = 8;
+			deltaFitness = new Float(Math.round(deltaFitness * norm)) / norm;
+			
+			
+			
+			TeamStatus heimStatus = fitnessCalculator.getTeamStatus(heimTeam, saison, spieltag, -1);
+			TeamStatus gastStatus = fitnessCalculator.getTeamStatus(gastTeam, saison, spieltag, -1);
 			float estimatedGoals = estimationService.getEstimatedGoals(heimStatus, gastStatus);
 				
 			float toreHeim = (estimatedGoals + deltaFitness) / 2;
@@ -150,7 +127,7 @@ public class FitnessBot {
 				sendTipp(match, th, tg);
 			}
 				
-	
+
 				System.out.println("" + heimTeam.getName() + "-"
 						+ gastTeam.getName() + " "
 						+ th + ":" 
@@ -159,11 +136,6 @@ public class FitnessBot {
 						+ match.getGastTore() + ") "
 						+ "["
 						+ String.format("%.4f", deltaFitness)
-	/*
-						+ String.format("%.2f", heimPerformance)
-						+ ":"
-		 				+ String.format("%.2f", gastPerformance)
-		*/ 				
 						+ "] "
 						+ spielPunkte
 				);
@@ -182,13 +154,11 @@ public class FitnessBot {
 	
 	
 	
-	
-	
 	private void sendTipp(Match match, int th, int tg) {
 		try {
 		    // Construct data
 		    String data = "match_id=" + match.getOpenLigaId() + "&token=3d9pm7cj8re2r8frc6nce3o5&result=" + th + ":" + tg;
-
+		    
 		    // Send data
 		    URL url = new URL("http://botliga.de/api/guess");
 		    URLConnection conn = url.openConnection();
@@ -208,20 +178,6 @@ public class FitnessBot {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-
-	private String getSpieltagId(int saison, int spieltag, int offset) {
-		int tag = spieltag + offset;
-		int sai = saison;
-		while (tag < 1) {
-			sai--;
-			tag=tag+34;
-		}
-		while (tag > 34) {
-			sai++;
-			tag=tag-34;
-		}
-		return getSpieltagId(sai,tag);
 	}
 
 	private String getSpieltagId(int saison, int spieltag) {
