@@ -131,6 +131,13 @@ public class TeamStatus {
 		}
 	}
 
+	public int getOpponent() {
+		if (match.getHeimTeam() == this.team) {
+			return match.getGastTeam();
+		} else {
+			return match.getHeimTeam();
+		}
+	}
 	
 
 }

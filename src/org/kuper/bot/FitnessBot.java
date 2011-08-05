@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.kuper.bot.domain.Match;
@@ -29,7 +30,9 @@ public class FitnessBot {
 			System.out.println("" + s.getSaison() + "-" + s.getSpieltag() + "X " + (s.getMatch().getHeimTeam()==134?s.getMatch().getHeimTore():s.getMatch().getGastTore()) + "-"  + s.getHeimTore() + " X" + s.getTordifferenz());
 		}
 */		
-		tippeSaisons();
+//		tippeSaisons();
+		tippeSpieltag(2011, 1, true);
+		
 //		tippeSaison(2010, true);
 //		tippeSaison(2010, false);
 		
@@ -72,7 +75,24 @@ public class FitnessBot {
 		float heimVorteil = estimationService.estimateHomeAdavantage();
 		
 		int spieltagsPunkte = 0;
+		
+		
+		Map<Integer, Float> fitnessStore = new HashMap<Integer, Float>(); 
+		for (int spiel = 1; spiel <= 9; spiel++) {
 			
+			String matchId = getMatchId(saison, spieltag, spiel);	
+			Match match = matches.get(matchId);
+			
+			Team heimTeam = teams.get(match.getHeimTeam());
+			fitnessStore.put(heimTeam.getId(), fitnessCalculator.calculateFitness(saison, spieltag, heimTeam));
+
+			Team gastTeam = teams.get(match.getGastTeam());
+			fitnessStore.put(gastTeam.getId(), fitnessCalculator.calculateFitness(saison, spieltag, gastTeam));
+			
+		}
+		
+		
+		
 		for (int spiel = 1; spiel <= 9; spiel++) {
 				
 			String matchId = getMatchId(saison, spieltag, spiel);
@@ -82,6 +102,10 @@ public class FitnessBot {
 			Team heimTeam = teams.get(match.getHeimTeam());
 			float fitnessHeim = fitnessCalculator.calculateFitness(saison, spieltag, heimTeam);
 
+			float avgOpponentHeim = fitnessCalculator.getAverageOpponentStrength(saison, spieltag, heimTeam, fitnessStore);
+			System.out.println("AVG heim: " + avgOpponentHeim);
+//			fitnessHeim = fitnessHeim * (1 - avgOpponentHeim/30);
+			
 			float serienFaktorHeim = fitnessCalculator.getSerienFaktor(saison, spieltag, heimTeam);
 			if (serienFaktorHeim < 0) {
 				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + heimTeam.getName()  );
@@ -92,6 +116,13 @@ public class FitnessBot {
 			Team gastTeam = teams.get(match.getGastTeam());
 			float fitnessGast = fitnessCalculator.calculateFitness(saison, spieltag, gastTeam);
 
+			
+			float avgOpponentGast = fitnessCalculator.getAverageOpponentStrength(saison, spieltag, gastTeam, fitnessStore);
+			System.out.println("AVG gast: " + avgOpponentGast);
+//			fitnessGast = fitnessGast * (1 - avgOpponentGast/30);
+
+			
+			
 			float serienFaktorGast = fitnessCalculator.getSerienFaktor(saison, spieltag, gastTeam);
 			if (serienFaktorGast < 0) {
 				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + gastTeam.getName()   );
