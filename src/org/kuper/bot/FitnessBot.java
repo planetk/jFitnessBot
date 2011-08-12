@@ -31,7 +31,7 @@ public class FitnessBot {
 		}
 */		
 //		tippeSaisons();
-		tippeSpieltag(2011, 1, true);
+		tippeSpieltag(2011, 2, true);
 		
 //		tippeSaison(2010, true);
 //		tippeSaison(2010, false);
