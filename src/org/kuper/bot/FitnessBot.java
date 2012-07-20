@@ -30,8 +30,8 @@ public class FitnessBot {
 			System.out.println("" + s.getSaison() + "-" + s.getSpieltag() + "X " + (s.getMatch().getHeimTeam()==134?s.getMatch().getHeimTore():s.getMatch().getGastTore()) + "-"  + s.getHeimTore() + " X" + s.getTordifferenz());
 		}
 */		
-//		tippeSaisons();
-		tippeSpieltag(2011, 2, true);
+		tippeSaisons();
+//		tippeSpieltag(2011, 34, true);
 		
 //		tippeSaison(2010, true);
 //		tippeSaison(2010, false);
@@ -103,13 +103,13 @@ public class FitnessBot {
 			float fitnessHeim = fitnessCalculator.calculateFitness(saison, spieltag, heimTeam);
 
 			float avgOpponentHeim = fitnessCalculator.getAverageOpponentStrength(saison, spieltag, heimTeam, fitnessStore);
-			System.out.println("AVG heim: " + avgOpponentHeim);
+//			System.out.println("AVG heim: " + avgOpponentHeim);
 //			fitnessHeim = fitnessHeim * (1 - avgOpponentHeim/30);
 			
 			float serienFaktorHeim = fitnessCalculator.getSerienFaktor(saison, spieltag, heimTeam);
-			if (serienFaktorHeim < 0) {
-				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + heimTeam.getName()  );
-			}
+//			if (serienFaktorHeim < 0) {
+//				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + heimTeam.getName()  );
+//			}
 			
 			// -------------------------
 			
@@ -118,15 +118,15 @@ public class FitnessBot {
 
 			
 			float avgOpponentGast = fitnessCalculator.getAverageOpponentStrength(saison, spieltag, gastTeam, fitnessStore);
-			System.out.println("AVG gast: " + avgOpponentGast);
+//			System.out.println("AVG gast: " + avgOpponentGast);
 //			fitnessGast = fitnessGast * (1 - avgOpponentGast/30);
 
 			
 			
 			float serienFaktorGast = fitnessCalculator.getSerienFaktor(saison, spieltag, gastTeam);
-			if (serienFaktorGast < 0) {
-				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + gastTeam.getName()   );
-			}
+//			if (serienFaktorGast < 0) {
+//				System.err.println("SERIE: (" + spieltag + "/" + saison + ") " + gastTeam.getName()   );
+//			}
 
 			
 			float heimPerformance = heimVorteil + fitnessHeim + serienFaktorHeim;
@@ -158,7 +158,7 @@ public class FitnessBot {
 				sendTipp(match, th, tg);
 			}
 				
-
+/*
 				System.out.println("" + heimTeam.getName() + "-"
 						+ gastTeam.getName() + " "
 						+ th + ":" 
@@ -170,13 +170,13 @@ public class FitnessBot {
 						+ "] "
 						+ spielPunkte
 				);
-	
+*/	
 			spieltagsPunkte = spieltagsPunkte + spielPunkte;
 		}
 			
 		//	System.out.println("---------------------------------------");
-			System.out.println("Spieltag (" + spieltag + "/" + saison + "): " + spieltagsPunkte);
-			System.out.println("---------------------------------------");
+//			System.out.println("Spieltag (" + spieltag + "/" + saison + "): " + spieltagsPunkte);
+//			System.out.println("---------------------------------------");
 			
 		
 		return spieltagsPunkte;
@@ -189,7 +189,8 @@ public class FitnessBot {
 		try {
 		    // Construct data
 		    String data = "match_id=" + match.getOpenLigaId() + "&token=3d9pm7cj8re2r8frc6nce3o5&result=" + th + ":" + tg;
-		    
+//		    String data = "match_id=" + match.getOpenLigaId() + "&token=3d9pm7cj8re2r8frc6nce3o5&secret=uPIRFcip2&result=" + th + ":" + tg;
+
 		    // Send data
 		    URL url = new URL("http://botliga.de/api/guess");
 		    URLConnection conn = url.openConnection();
